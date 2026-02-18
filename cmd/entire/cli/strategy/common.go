@@ -248,7 +248,11 @@ var initRedactionOnce sync.Once
 func EnsureRedactionConfigured() {
 	initRedactionOnce.Do(func() {
 		s, err := settings.Load()
-		if err != nil || s.Redaction == nil || s.Redaction.PII == nil || !s.Redaction.PII.Enabled {
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "[entire] Warning: failed to load settings for PII redaction: %v\n", err)
+			return
+		}
+		if s.Redaction == nil || s.Redaction.PII == nil || !s.Redaction.PII.Enabled {
 			return
 		}
 		pii := s.Redaction.PII
