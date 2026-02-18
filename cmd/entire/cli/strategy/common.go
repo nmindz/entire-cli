@@ -17,7 +17,9 @@ import (
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint"
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint/id"
 	"github.com/entireio/cli/cmd/entire/cli/paths"
+	"github.com/entireio/cli/cmd/entire/cli/settings"
 	"github.com/entireio/cli/cmd/entire/cli/trailers"
+	"github.com/entireio/cli/redact"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -238,6 +240,48 @@ var (
 	protectedDirsCache []string
 )
 
+var initRedactionOnce sync.Once
+
+// EnsureRedactionConfigured loads PII redaction settings and configures the
+// redact package. Called once before any checkpoint writes. No-op if PII is
+// not enabled in settings.
+func EnsureRedactionConfigured() {
+	initRedactionOnce.Do(func() {
+		s, err := settings.Load()
+		if err != nil || s.Redaction == nil || s.Redaction.PII == nil || !s.Redaction.PII.Enabled {
+			return
+		}
+		pii := s.Redaction.PII
+		cfg := redact.PIIConfig{
+			Enabled:        true,
+			Categories:     make(map[redact.PIICategory]bool),
+			CustomPatterns: pii.CustomPatterns,
+		}
+		// Email and phone default to true when PII is enabled; address defaults to false.
+		cfg.Categories[redact.PIIEmail] = pii.Email == nil || *pii.Email
+		cfg.Categories[redact.PIIPhone] = pii.Phone == nil || *pii.Phone
+		cfg.Categories[redact.PIIAddress] = pii.Address != nil && *pii.Address
+		redact.ConfigurePII(cfg)
+	})
+}
+
+// homeRelativePath strips the $HOME/ prefix from an absolute path,
+// returning a home-relative path suitable for persisting in metadata.
+// Returns "" if the path is empty or not under $HOME.
+func homeRelativePath(absPath string) string {
+	if absPath == "" {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return ""
+	}
+	prefix := home + string(filepath.Separator)
+	if !strings.HasPrefix(absPath, prefix) {
+		return ""
+	}
+	return absPath[len(prefix):]
+}
 // isSpecificAgentType returns true if the agent type is a known, specific value
 // (not empty and not the generic "Agent" fallback).
 func isSpecificAgentType(t agent.AgentType) bool {

@@ -121,6 +121,8 @@ func (s *AutoCommitStrategy) PrePush(remote string) error {
 }
 
 func (s *AutoCommitStrategy) SaveStep(ctx StepContext) error {
+	EnsureRedactionConfigured()
+
 	repo, err := OpenRepository()
 	if err != nil {
 		return fmt.Errorf("failed to open git repository: %w", err)

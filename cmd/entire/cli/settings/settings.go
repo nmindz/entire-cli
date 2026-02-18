@@ -49,6 +49,24 @@ type EntireSettings struct {
 	// Telemetry controls anonymous usage analytics.
 	// nil = not asked yet (show prompt), true = opted in, false = opted out
 	Telemetry *bool `json:"telemetry,omitempty"`
+
+	// Redaction configures PII redaction behavior for transcripts and metadata.
+	Redaction *RedactionSettings `json:"redaction,omitempty"`
+}
+
+// RedactionSettings configures redaction behavior beyond the default secret detection.
+type RedactionSettings struct {
+	PII *PIISettings `json:"pii,omitempty"`
+}
+
+// PIISettings configures PII detection categories.
+// When Enabled is true, email and phone default to true; address defaults to false.
+type PIISettings struct {
+	Enabled        bool              `json:"enabled"`
+	Email          *bool             `json:"email,omitempty"`
+	Phone          *bool             `json:"phone,omitempty"`
+	Address        *bool             `json:"address,omitempty"`
+	CustomPatterns map[string]string `json:"custom_patterns,omitempty"`
 }
 
 // Load loads the Entire settings from .entire/settings.json,
@@ -202,6 +220,15 @@ func mergeJSON(settings *EntireSettings, data []byte) error {
 			return fmt.Errorf("parsing telemetry field: %w", err)
 		}
 		settings.Telemetry = &t
+	}
+
+	// Override redaction if present
+	if redactionRaw, ok := raw["redaction"]; ok {
+		var r RedactionSettings
+		if err := json.Unmarshal(redactionRaw, &r); err != nil {
+			return fmt.Errorf("parsing redaction field: %w", err)
+		}
+		settings.Redaction = &r
 	}
 
 	return nil
