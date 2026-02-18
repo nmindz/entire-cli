@@ -710,6 +710,7 @@ func generateContextFromPrompts(prompts []string) []byte {
 // CondenseSessionByID force-condenses a session by its ID and cleans up.
 // This is used by "entire doctor" to salvage stuck sessions.
 func (s *ManualCommitStrategy) CondenseSessionByID(sessionID string) error {
+	EnsureRedactionConfigured()
 	ctx := logging.WithComponent(context.Background(), "condense-by-id")
 
 	// Load session state

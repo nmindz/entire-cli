@@ -503,6 +503,7 @@ func (s *AutoCommitStrategy) GetSessionInfo() (*SessionInfo, error) {
 // 1. Commit code changes to active branch (no trailers - clean history)
 // 2. Commit task metadata to entire/checkpoints/v1 branch with checkpoint format
 func (s *AutoCommitStrategy) SaveTaskStep(ctx TaskStepContext) error {
+	EnsureRedactionConfigured()
 	repo, err := OpenRepository()
 	if err != nil {
 		return fmt.Errorf("failed to open git repository: %w", err)

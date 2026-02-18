@@ -47,6 +47,7 @@ type region struct{ start, end int }
 // Empty label = secret (produces "REDACTED"). Non-empty = PII (produces "[REDACTED_<LABEL>]").
 type taggedRegion struct {
 	region
+
 	label string
 }
 
