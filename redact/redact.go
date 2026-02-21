@@ -104,7 +104,7 @@ func String(s string) string {
 	}
 
 	// 3. PII detection (opt-in — only runs when configured).
-	regions = append(regions, detectPII(s)...)
+	regions = append(regions, detectPII(getPIIConfig(), s)...)
 
 	if len(regions) == 0 {
 		return s

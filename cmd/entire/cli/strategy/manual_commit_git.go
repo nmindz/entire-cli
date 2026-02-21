@@ -22,8 +22,6 @@ import (
 // SaveStep saves a checkpoint to the shadow branch.
 // Uses checkpoint.GitStore.WriteTemporary for git operations.
 func (s *ManualCommitStrategy) SaveStep(ctx StepContext) error {
-	EnsureRedactionConfigured()
-
 	repo, err := OpenRepository()
 	if err != nil {
 		return fmt.Errorf("failed to open git repository: %w", err)
@@ -168,7 +166,6 @@ func (s *ManualCommitStrategy) SaveStep(ctx StepContext) error {
 // SaveTaskStep saves a task step checkpoint to the shadow branch.
 // Uses checkpoint.GitStore.WriteTemporaryTask for git operations.
 func (s *ManualCommitStrategy) SaveTaskStep(ctx TaskStepContext) error {
-	EnsureRedactionConfigured()
 	repo, err := OpenRepository()
 	if err != nil {
 		return fmt.Errorf("failed to open git repository: %w", err)

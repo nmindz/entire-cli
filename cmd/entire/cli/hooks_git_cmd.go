@@ -81,6 +81,10 @@ func initHookLogging() func() {
 		// Init failed - logging will use stderr fallback
 		return func() {}
 	}
+
+	// Configure PII redaction once at startup (reads settings, no-op if disabled).
+	strategy.EnsureRedactionConfigured()
+
 	return logging.Close
 }
 

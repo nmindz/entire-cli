@@ -600,8 +600,6 @@ func (h *postCommitActionHandler) HandleWarnStaleSession(_ *session.State) error
 //
 //nolint:unparam // error return required by interface but hooks must return nil
 func (s *ManualCommitStrategy) PostCommit() error {
-	EnsureRedactionConfigured()
-
 	logCtx := logging.WithComponent(context.Background(), "checkpoint")
 
 	repo, err := OpenRepository()

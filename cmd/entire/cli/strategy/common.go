@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/entireio/cli/cmd/entire/cli/agent"
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint"
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint/id"
+	"github.com/entireio/cli/cmd/entire/cli/logging"
 	"github.com/entireio/cli/cmd/entire/cli/paths"
 	"github.com/entireio/cli/cmd/entire/cli/settings"
 	"github.com/entireio/cli/cmd/entire/cli/trailers"
@@ -243,13 +245,15 @@ var (
 var initRedactionOnce sync.Once
 
 // EnsureRedactionConfigured loads PII redaction settings and configures the
-// redact package. Called once before any checkpoint writes. No-op if PII is
-// not enabled in settings.
+// redact package. No-op if PII is not enabled in settings.
+// Must be called at each process entry point before checkpoint writes
+// (e.g., hook PersistentPreRunE, doctor PreRun).
 func EnsureRedactionConfigured() {
 	initRedactionOnce.Do(func() {
 		s, err := settings.Load()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[entire] Warning: failed to load settings for PII redaction: %v\n", err)
+			logCtx := logging.WithComponent(context.Background(), "redaction")
+			logging.Warn(logCtx, "failed to load settings for PII redaction", slog.String("error", err.Error()))
 			return
 		}
 		if s.Redaction == nil || s.Redaction.PII == nil || !s.Redaction.PII.Enabled {
