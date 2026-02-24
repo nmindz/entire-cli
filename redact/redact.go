@@ -115,7 +115,10 @@ func String(s string) string {
 		if regions[i].start != regions[j].start {
 			return regions[i].start < regions[j].start
 		}
-		return regions[i].end > regions[j].end // larger region first
+		if regions[i].end != regions[j].end {
+			return regions[i].end > regions[j].end // larger region first
+		}
+		return regions[i].label < regions[j].label // deterministic tie-break
 	})
 	merged := []taggedRegion{regions[0]}
 	for _, r := range regions[1:] {
