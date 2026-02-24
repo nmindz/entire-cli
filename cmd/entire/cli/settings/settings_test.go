@@ -219,6 +219,53 @@ func TestLoad_LocalOverridesRedaction(t *testing.T) {
 	}
 }
 
+func TestLoad_LocalMergesRedactionSubfields(t *testing.T) {
+	tmpDir := t.TempDir()
+	entireDir := filepath.Join(tmpDir, ".entire")
+	if err := os.MkdirAll(entireDir, 0755); err != nil {
+		t.Fatalf("failed to create .entire directory: %v", err)
+	}
+
+	// Base: PII enabled with email=true, phone=true
+	baseContent := `{"strategy":"manual-commit","redaction":{"pii":{"enabled":true,"email":true,"phone":true}}}`
+	if err := os.WriteFile(filepath.Join(entireDir, "settings.json"), []byte(baseContent), 0644); err != nil {
+		t.Fatalf("failed to write settings file: %v", err)
+	}
+
+	// Local: adds custom_patterns only — should NOT erase email/phone from base
+	localContent := `{"redaction":{"pii":{"enabled":true,"custom_patterns":{"ssn":"\\d{3}-\\d{2}-\\d{4}"}}}}`
+	if err := os.WriteFile(filepath.Join(entireDir, "settings.local.json"), []byte(localContent), 0644); err != nil {
+		t.Fatalf("failed to write local settings file: %v", err)
+	}
+
+	if err := os.MkdirAll(filepath.Join(tmpDir, ".git"), 0755); err != nil {
+		t.Fatalf("failed to create .git directory: %v", err)
+	}
+	t.Chdir(tmpDir)
+
+	settings, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if settings.Redaction == nil || settings.Redaction.PII == nil {
+		t.Fatal("expected redaction.pii to be non-nil")
+	}
+	// email and phone from base should survive local merge
+	if settings.Redaction.PII.Email == nil || !*settings.Redaction.PII.Email {
+		t.Error("expected email=true from base to survive local merge")
+	}
+	if settings.Redaction.PII.Phone == nil || !*settings.Redaction.PII.Phone {
+		t.Error("expected phone=true from base to survive local merge")
+	}
+	// custom_patterns from local should be present
+	if settings.Redaction.PII.CustomPatterns == nil {
+		t.Fatal("expected custom_patterns from local to be present")
+	}
+	if _, ok := settings.Redaction.PII.CustomPatterns["ssn"]; !ok {
+		t.Error("expected ssn pattern from local override")
+	}
+}
+
 // containsUnknownField checks if the error message indicates an unknown field
 func containsUnknownField(msg string) bool {
 	// Go's json package reports unknown fields with this message format

@@ -222,15 +222,84 @@ func mergeJSON(settings *EntireSettings, data []byte) error {
 		settings.Telemetry = &t
 	}
 
-	// Override redaction if present
+	// Merge redaction sub-fields if present (field-level, not wholesale replace).
 	if redactionRaw, ok := raw["redaction"]; ok {
-		var r RedactionSettings
-		if err := json.Unmarshal(redactionRaw, &r); err != nil {
+		if settings.Redaction == nil {
+			settings.Redaction = &RedactionSettings{}
+		}
+		if err := mergeRedaction(settings.Redaction, redactionRaw); err != nil {
 			return fmt.Errorf("parsing redaction field: %w", err)
 		}
-		settings.Redaction = &r
 	}
 
+	return nil
+}
+
+// mergeRedaction merges redaction overrides into existing RedactionSettings.
+// Only fields present in the override JSON are applied.
+func mergeRedaction(dst *RedactionSettings, data json.RawMessage) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("parsing redaction: %w", err)
+	}
+	if piiRaw, ok := raw["pii"]; ok {
+		if dst.PII == nil {
+			dst.PII = &PIISettings{}
+		}
+		if err := mergePIISettings(dst.PII, piiRaw); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// mergePIISettings merges PII overrides into existing PIISettings.
+// Only fields present in the override JSON are applied; missing fields
+// are preserved from the base settings.
+func mergePIISettings(dst *PIISettings, data json.RawMessage) error {
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return fmt.Errorf("parsing pii: %w", err)
+	}
+	if v, ok := raw["enabled"]; ok {
+		if err := json.Unmarshal(v, &dst.Enabled); err != nil {
+			return fmt.Errorf("parsing pii.enabled: %w", err)
+		}
+	}
+	if v, ok := raw["email"]; ok {
+		var b bool
+		if err := json.Unmarshal(v, &b); err != nil {
+			return fmt.Errorf("parsing pii.email: %w", err)
+		}
+		dst.Email = &b
+	}
+	if v, ok := raw["phone"]; ok {
+		var b bool
+		if err := json.Unmarshal(v, &b); err != nil {
+			return fmt.Errorf("parsing pii.phone: %w", err)
+		}
+		dst.Phone = &b
+	}
+	if v, ok := raw["address"]; ok {
+		var b bool
+		if err := json.Unmarshal(v, &b); err != nil {
+			return fmt.Errorf("parsing pii.address: %w", err)
+		}
+		dst.Address = &b
+	}
+	if v, ok := raw["custom_patterns"]; ok {
+		var cp map[string]string
+		if err := json.Unmarshal(v, &cp); err != nil {
+			return fmt.Errorf("parsing pii.custom_patterns: %w", err)
+		}
+		if dst.CustomPatterns == nil {
+			dst.CustomPatterns = cp
+		} else {
+			for k, val := range cp {
+				dst.CustomPatterns[k] = val
+			}
+		}
+	}
 	return nil
 }
 
