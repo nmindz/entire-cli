@@ -9,11 +9,12 @@ import (
 )
 
 // TestCarryForward_NewSessionCommitDoesNotCondenseOldSession verifies that when
-// an old session has carry-forward files and a NEW session commits unrelated files,
-// the old session is NOT condensed into the new session's commit.
+// an old ENDED session has carry-forward files and a NEW session commits unrelated
+// files, the old session IS force-condensed to prevent unbounded accumulation
+// (GitHub issue #591).
 //
-// This is a regression test for the bug where sessions with carry-forward files
-// would be re-condensed into every subsequent commit indefinitely.
+// Without force-condensation, ENDED sessions that fail the file overlap check
+// persist forever, re-processed on every future commit at ~73-103ms each.
 //
 // This integration test complements the unit tests in phase_postcommit_test.go by
 // testing the full hook invocation path with multiple sessions interacting.
@@ -25,9 +26,8 @@ import (
 // 4. Session 1 ends
 // 5. Make some unrelated commits (simulating time passing)
 // 6. New session 2 creates and commits file6.txt
-// 7. Verify: Session 1 was NOT condensed into session 2's commit
-// 8. Finally commit file2.txt
-// 9. Verify: Session 1 IS condensed (carry-forward consumed)
+// 7. Verify: Session 1 WAS force-condensed and marked FullyCondensed
+// 8. Verify: Session 2 WAS condensed normally
 func TestCarryForward_NewSessionCommitDoesNotCondenseOldSession(t *testing.T) {
 	t.Parallel()
 	env := NewTestEnv(t)
@@ -88,8 +88,6 @@ func TestCarryForward_NewSessionCommitDoesNotCondenseOldSession(t *testing.T) {
 	}
 	t.Logf("Session1 (ENDED) FilesTouched: %v", state1.FilesTouched)
 
-	session1StepCount := state1.StepCount
-
 	// ========================================
 	// Phase 2: Make some unrelated commits (simulating time passing)
 	// ========================================
@@ -141,34 +139,32 @@ func TestCarryForward_NewSessionCommitDoesNotCondenseOldSession(t *testing.T) {
 	finalHead := env.GetHeadHash()
 
 	// ========================================
-	// Phase 5: Verify session 1 was NOT condensed
+	// Phase 5: Verify session 1 WAS force-condensed (no overlap, but ENDED)
 	// ========================================
-	t.Log("Phase 5: Verifying session 1 (with carry-forward) was NOT condensed")
+	t.Log("Phase 5: Verifying session 1 (ENDED, no overlap) was force-condensed")
 
 	state1After, err := env.GetSessionState(session1.ID)
 	if err != nil {
 		t.Fatalf("GetSessionState for session1 after session2 commit failed: %v", err)
 	}
 
-	// StepCount should be unchanged
-	if state1After.StepCount != session1StepCount {
-		t.Errorf("Session 1 StepCount changed! Expected %d, got %d (incorrectly condensed into session 2's commit)",
-			session1StepCount, state1After.StepCount)
+	// StepCount should be reset to 0 (force-condensation happened)
+	if state1After.StepCount != 0 {
+		t.Errorf("Session 1 StepCount should be 0 after force-condensation, got %d", state1After.StepCount)
 	}
 
-	// FilesTouched should still have file2.txt
-	hasFile2 := false
-	for _, f := range state1After.FilesTouched {
-		if f == "file2.txt" {
-			hasFile2 = true
-			break
-		}
-	}
-	if !hasFile2 {
-		t.Errorf("Session 1 FilesTouched was cleared! Expected file2.txt, got: %v", state1After.FilesTouched)
+	// FilesTouched should be empty (no carry-forward for force-condensed sessions)
+	if len(state1After.FilesTouched) != 0 {
+		t.Errorf("Session 1 FilesTouched should be empty after force-condensation, got: %v", state1After.FilesTouched)
 	}
 
-	t.Logf("Session 1 correctly preserved: StepCount=%d, FilesTouched=%v", state1After.StepCount, state1After.FilesTouched)
+	// FullyCondensed should be true
+	if !state1After.FullyCondensed {
+		t.Errorf("Session 1 should be marked FullyCondensed after force-condensation")
+	}
+
+	t.Logf("Session 1 correctly force-condensed: StepCount=%d, FilesTouched=%v, FullyCondensed=%v",
+		state1After.StepCount, state1After.FilesTouched, state1After.FullyCondensed)
 
 	// ========================================
 	// Phase 6: Verify session 2 WAS condensed
@@ -185,35 +181,7 @@ func TestCarryForward_NewSessionCommitDoesNotCondenseOldSession(t *testing.T) {
 			finalHead[:7], state2After.BaseCommit[:7])
 	}
 
-	// ========================================
-	// Phase 7: Finally commit file2.txt (session 1's carry-forward file)
-	// ========================================
-	t.Log("Phase 7: Committing file2.txt (session 1's carry-forward file)")
-
-	env.GitAdd("file2.txt")
-	env.GitCommitWithShadowHooks("Add file2 (session 1 carry-forward)", "file2.txt")
-
-	// ========================================
-	// Phase 8: Verify session 1 WAS condensed this time
-	// ========================================
-	t.Log("Phase 8: Verifying session 1 WAS condensed when its carry-forward file was committed")
-
-	state1Final, err := env.GetSessionState(session1.ID)
-	if err != nil {
-		t.Fatalf("GetSessionState for session1 after file2 commit failed: %v", err)
-	}
-
-	// StepCount should be reset to 0 (condensation happened)
-	if state1Final.StepCount != 0 {
-		t.Errorf("Session 1 StepCount should be 0 after condensation, got %d", state1Final.StepCount)
-	}
-
-	// FilesTouched should be empty (carry-forward consumed)
-	if len(state1Final.FilesTouched) != 0 {
-		t.Errorf("Session 1 FilesTouched should be empty after condensation, got: %v", state1Final.FilesTouched)
-	}
-
 	t.Log("Test completed successfully:")
-	t.Log("  - Session 1 NOT condensed into session 2's commit (file6.txt)")
-	t.Log("  - Session 1 WAS condensed when its own file (file2.txt) was committed")
+	t.Log("  - Session 1 force-condensed into session 2's commit (ENDED, no overlap)")
+	t.Log("  - Session 2 condensed normally")
 }

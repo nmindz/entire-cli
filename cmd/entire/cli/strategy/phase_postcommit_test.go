@@ -1550,16 +1550,16 @@ func TestPostCommit_OldEndedSession_BaseCommitNotUpdated(t *testing.T) {
 		"NEW ACTIVE session's BaseCommit should be updated after condensation")
 }
 
-// TestPostCommit_EndedSessionCarryForward_NotCondensedIntoUnrelatedCommit verifies
-// that an ENDED session with carry-forward files is NOT condensed into a commit
-// that doesn't touch any of those files.
+// TestPostCommit_EndedSessionCarryForward_ForceCondensedWithoutOverlap verifies
+// that an ENDED session with carry-forward files IS force-condensed even when the
+// commit doesn't touch any of those files.
 //
-// This is the primary bug scenario: ENDED sessions go through HandleCondenseIfFilesTouched,
-// which previously only checked len(FilesTouched) > 0 && hasNew — no overlap check.
-// Carry-forward would set FilesTouched with remaining uncommitted files, and
-// sessionHasNewContent returned true because the shadow branch had content. This
-// caused ENDED sessions to be re-condensed into every subsequent commit indefinitely.
-func TestPostCommit_EndedSessionCarryForward_NotCondensedIntoUnrelatedCommit(t *testing.T) {
+// Without force-condensation, ENDED sessions that fail the overlap check would
+// persist indefinitely — re-processed on every future commit at ~73-103ms each,
+// causing O(N) accumulation (GitHub issue #591). Force-condensation preserves all
+// FilesTouched on the checkpoints branch, then clears them to mark the session
+// FullyCondensed so it's skipped on future commits.
+func TestPostCommit_EndedSessionCarryForward_ForceCondensedWithoutOverlap(t *testing.T) {
 	dir := setupGitRepo(t)
 	t.Chdir(dir)
 
@@ -1582,9 +1582,6 @@ func TestPostCommit_EndedSessionCarryForward_NotCondensedIntoUnrelatedCommit(t *
 	endedState.FilesTouched = []string{"test.txt"}
 	endedState.CheckpointTranscriptStart = 0
 	require.NoError(t, s.saveSessionState(context.Background(), endedState))
-
-	endedOriginalBaseCommit := endedState.BaseCommit
-	endedOriginalStepCount := endedState.StepCount
 
 	// Move HEAD forward with an unrelated commit (no trailer)
 	wt, err := repo.Worktree()
@@ -1651,25 +1648,29 @@ func TestPostCommit_EndedSessionCarryForward_NotCondensedIntoUnrelatedCommit(t *
 	err = s.PostCommit(context.Background())
 	require.NoError(t, err)
 
-	// --- Verify: ENDED session was NOT condensed ---
+	// --- Verify: ENDED session WAS force-condensed ---
 	endedState, err = s.loadSessionState(context.Background(), endedSessionID)
 	require.NoError(t, err)
 
-	// StepCount should be unchanged (not reset by condensation)
-	assert.Equal(t, endedOriginalStepCount, endedState.StepCount,
-		"ENDED session StepCount should NOT be reset (no condensation)")
+	// StepCount should be reset by condensation
+	assert.Equal(t, 0, endedState.StepCount,
+		"ENDED session StepCount should be reset by force-condensation")
 
-	// BaseCommit should NOT be updated for ENDED sessions (PR #359)
-	assert.Equal(t, endedOriginalBaseCommit, endedState.BaseCommit,
-		"ENDED session BaseCommit should NOT be updated")
+	// BaseCommit should be updated to newHead by condensation
+	assert.Equal(t, newHead, endedState.BaseCommit,
+		"ENDED session BaseCommit should be updated after force-condensation")
 
-	// FilesTouched should still have the carry-forward files (not cleared by condensation)
-	assert.Equal(t, []string{"test.txt"}, endedState.FilesTouched,
-		"ENDED session FilesTouched should be preserved (carry-forward files not consumed)")
+	// FilesTouched should be nil (no carry-forward for force-condensed sessions)
+	assert.Empty(t, endedState.FilesTouched,
+		"ENDED session FilesTouched should be cleared (no carry-forward)")
 
 	// Phase stays ENDED
 	assert.Equal(t, session.PhaseEnded, endedState.Phase,
 		"ENDED session should remain ENDED")
+
+	// FullyCondensed should be true (ENDED + condensed + no FilesTouched)
+	assert.True(t, endedState.FullyCondensed,
+		"ENDED session should be marked FullyCondensed after force-condensation")
 
 	// --- Verify: new ACTIVE session WAS condensed ---
 	newState, err = s.loadSessionState(context.Background(), newSessionID)
