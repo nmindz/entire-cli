@@ -16,6 +16,7 @@ import (
 	"github.com/entireio/cli/cmd/entire/cli/session"
 	"github.com/entireio/cli/cmd/entire/cli/settings"
 	"github.com/entireio/cli/cmd/entire/cli/strategy"
+	"github.com/entireio/cli/cmd/entire/cli/vcs"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -73,6 +74,20 @@ modifying your active branch.`,
 				fmt.Fprintln(cmd.OutOrStdout(), "Note: This repository has no commits yet. Entire will be configured, but")
 				fmt.Fprintln(cmd.OutOrStdout(), "session checkpoints won't work until you create your first commit.")
 				fmt.Fprintln(cmd.OutOrStdout())
+			}
+
+			// Detect JJ colocated mode
+			switch vcs.Detect(ctx) {
+			case vcs.JJColocated:
+				fmt.Fprintln(cmd.OutOrStdout(), "  Detected: JJ (Jujutsu) colocated mode")
+				fmt.Fprintln(cmd.OutOrStdout(), "  Git hooks work alongside JJ. Use 'entire jj-wrapper' for automatic tracking.")
+				fmt.Fprintln(cmd.OutOrStdout())
+			case vcs.JJOnly:
+				fmt.Fprintln(cmd.ErrOrStderr(), "JJ-only mode is not supported. Please use colocated mode:")
+				fmt.Fprintln(cmd.ErrOrStderr(), "  jj git init --colocate")
+				return NewSilentError(errors.New("jj-only mode not supported"))
+			case vcs.GitOnly, vcs.Unknown:
+				// Git-only or unknown VCS — no additional output needed
 			}
 
 			// Non-interactive mode if --agent flag is provided

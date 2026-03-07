@@ -67,6 +67,14 @@ type EntireSettings struct {
 	// plugins (entire-agent-* binaries on $PATH). Defaults to false.
 	ExternalAgents bool `json:"external_agents,omitempty"`
 
+	// JJWrapper indicates the JJ shell wrapper has been installed.
+	// Set by `entire jj-wrapper` for status display purposes.
+	JJWrapper bool `json:"jj_wrapper,omitempty"`
+
+	// JJWatcher indicates the JJ auto-start watcher is enabled.
+	// Reserved for future use.
+	JJWatcher bool `json:"jj_watcher,omitempty"`
+
 	// Deprecated: no longer used. Exists to tolerate old settings files
 	// that still contain "strategy": "auto-commit" or similar.
 	Strategy string `json:"strategy,omitempty"`
@@ -257,6 +265,24 @@ func mergeJSON(settings *EntireSettings, data []byte) error {
 			return fmt.Errorf("parsing external_agents field: %w", err)
 		}
 		settings.ExternalAgents = ea
+	}
+
+	// Override jj_wrapper if present
+	if jjWrapperRaw, ok := raw["jj_wrapper"]; ok {
+		var jw bool
+		if err := json.Unmarshal(jjWrapperRaw, &jw); err != nil {
+			return fmt.Errorf("parsing jj_wrapper field: %w", err)
+		}
+		settings.JJWrapper = jw
+	}
+
+	// Override jj_watcher if present
+	if jjWatcherRaw, ok := raw["jj_watcher"]; ok {
+		var jw bool
+		if err := json.Unmarshal(jjWatcherRaw, &jw); err != nil {
+			return fmt.Errorf("parsing jj_watcher field: %w", err)
+		}
+		settings.JJWatcher = jw
 	}
 
 	return nil

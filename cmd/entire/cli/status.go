@@ -13,11 +13,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/entireio/cli/cmd/entire/cli/jj"
 	"github.com/entireio/cli/cmd/entire/cli/paths"
 	"github.com/entireio/cli/cmd/entire/cli/session"
 	"github.com/entireio/cli/cmd/entire/cli/settings"
 	"github.com/entireio/cli/cmd/entire/cli/strategy"
 	"github.com/entireio/cli/cmd/entire/cli/stringutil"
+	"github.com/entireio/cli/cmd/entire/cli/vcs"
 
 	"github.com/spf13/cobra"
 )
@@ -88,6 +90,18 @@ func runStatus(ctx context.Context, w io.Writer, detailed bool) error {
 	fmt.Fprintln(w)
 	fmt.Fprintln(w)
 	fmt.Fprintln(w, formatSettingsStatusShort(ctx, s, sty))
+
+	// Show VCS type
+	vcsType := vcs.Detect(ctx)
+	fmt.Fprintf(w, "  VCS:      %s\n", vcsType.String())
+	if vcsType == vcs.JJColocated {
+		if jj.IsAvailable() {
+			fmt.Fprintf(w, "  JJ:       available (use 'entire jj-wrapper' for automatic tracking)\n")
+		} else {
+			fmt.Fprintf(w, "  JJ:       binary not found\n")
+		}
+	}
+
 	if s.Enabled {
 		writeActiveSessions(ctx, w, sty)
 	}

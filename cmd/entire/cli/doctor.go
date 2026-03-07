@@ -9,8 +9,10 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint"
+	"github.com/entireio/cli/cmd/entire/cli/jj"
 	"github.com/entireio/cli/cmd/entire/cli/session"
 	"github.com/entireio/cli/cmd/entire/cli/strategy"
+	"github.com/entireio/cli/cmd/entire/cli/vcs"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
@@ -33,6 +35,10 @@ Checks performed:
      entire/checkpoints/v1 branches share no common ancestor (caused by a
      previous bug). Fixes by cherry-picking local checkpoints onto remote tip.
   2. Stuck sessions: sessions stuck in ACTIVE or ENDED phase that need cleanup.
+  3. JJ health checks (only when .jj/ is present):
+     - Warns if JJ is detected without Git colocated mode
+     - Warns if JJ colocated repo is detected but 'jj' binary is missing
+     - Suggests using 'entire jj-wrapper' for automatic session tracking
 
 A session is considered stuck if:
   - It is in ACTIVE phase with no interaction for over 1 hour
@@ -82,6 +88,10 @@ func runSessionsFix(cmd *cobra.Command, force bool) error {
 
 	if len(states) == 0 {
 		fmt.Fprintln(cmd.OutOrStdout(), "No stuck sessions found.")
+
+		// Check 3: JJ health checks (only when JJ is present)
+		checkJJ(cmd)
+
 		if metadataErr != nil {
 			return fmt.Errorf("metadata check failed: %w", metadataErr)
 		}
@@ -107,6 +117,10 @@ func runSessionsFix(cmd *cobra.Command, force bool) error {
 
 	if len(stuck) == 0 {
 		fmt.Fprintln(cmd.OutOrStdout(), "No stuck sessions found.")
+
+		// Check 3: JJ health checks (only when JJ is present)
+		checkJJ(cmd)
+
 		if metadataErr != nil {
 			return fmt.Errorf("metadata check failed: %w", metadataErr)
 		}
@@ -165,6 +179,9 @@ func runSessionsFix(cmd *cobra.Command, force bool) error {
 			fmt.Fprintf(cmd.OutOrStdout(), "  -> Skipped\n\n")
 		}
 	}
+
+	// Check 3: JJ health checks (only when JJ is present)
+	checkJJ(cmd)
 
 	if metadataErr != nil {
 		return fmt.Errorf("metadata check failed: %w", metadataErr)
@@ -356,6 +373,40 @@ func checkDisconnectedMetadata(cmd *cobra.Command, force bool) error {
 
 	fmt.Fprintln(w, "  -> Fixed: metadata branches reconciled")
 	return nil
+}
+
+// checkJJ runs JJ-specific health checks. These only execute when a .jj/
+// directory is present, and they print warnings or informational messages
+// to help users configure JJ colocated mode correctly.
+func checkJJ(cmd *cobra.Command) {
+	ctx := cmd.Context()
+	if !vcs.HasJJ(ctx) {
+		return
+	}
+
+	w := cmd.OutOrStdout()
+	fmt.Fprintln(w) // blank line before JJ section
+
+	vcsType := vcs.Detect(ctx)
+
+	// Check 1: JJ detected without colocated mode
+	if vcsType != vcs.JJColocated {
+		fmt.Fprintln(w, "JJ: WARNING")
+		fmt.Fprintln(w, "  JJ detected without Git colocated mode. Run: jj git init --colocate")
+		return // Remaining checks only apply to colocated repos
+	}
+
+	// Check 2: JJ colocated but binary not on PATH
+	if !jj.IsAvailable() {
+		fmt.Fprintln(w, "JJ binary: WARNING")
+		fmt.Fprintln(w, "  JJ colocated repo detected but 'jj' binary not found in PATH")
+	} else {
+		fmt.Fprintln(w, "JJ binary: OK")
+	}
+
+	// Check 3: Suggest jj-wrapper for automatic session tracking
+	fmt.Fprintln(w, "JJ integration: INFO")
+	fmt.Fprintln(w, "  JJ colocated mode detected. Use 'entire jj-wrapper' for automatic session tracking")
 }
 
 // canDeleteShadowBranch checks if a shadow branch can be safely deleted.
