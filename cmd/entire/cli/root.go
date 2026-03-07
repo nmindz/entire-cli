@@ -85,6 +85,8 @@ func NewRootCmd() *cobra.Command {
 	cmd.AddCommand(newDoctorCmd())
 	cmd.AddCommand(newTrailCmd())
 	cmd.AddCommand(newSendAnalyticsCmd())
+	cmd.AddCommand(newWatchCmd())
+	cmd.AddCommand(newJJWrapperCmd())
 	cmd.AddCommand(newCurlBashPostInstallCmd())
 
 	cmd.SetVersionTemplate(versionString())

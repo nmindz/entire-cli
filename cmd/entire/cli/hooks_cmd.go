@@ -57,6 +57,9 @@ func newHooksCmd() *cobra.Command {
 	// Git hooks are strategy-level (not agent-specific)
 	cmd.AddCommand(newHooksGitCmd())
 
+	// JJ hooks are strategy-level (not agent-specific)
+	cmd.AddCommand(newHooksJJCmd())
+
 	// Only built-in agents are registered eagerly (no process spawning).
 	// External agents are discovered lazily via the RunE fallback above.
 	for _, agentName := range agent.List() {
