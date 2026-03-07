@@ -139,6 +139,12 @@ func (s *ManualCommitStrategy) FindSessionsForCommit(ctx context.Context, baseCo
 	return s.findSessionsForCommit(ctx, baseCommitSHA)
 }
 
+// FindSessionsForWorktree is the exported version of findSessionsForWorktree.
+// Used by the JJ hook commands to check for active sessions before adding trailers.
+func (s *ManualCommitStrategy) FindSessionsForWorktree(ctx context.Context, worktreePath string) ([]*SessionState, error) {
+	return s.findSessionsForWorktree(ctx, worktreePath)
+}
+
 // ClearSessionState is the exported version of clearSessionState.
 // Used by the rewind reset command to clean up session state files.
 func (s *ManualCommitStrategy) ClearSessionState(ctx context.Context, sessionID string) error {
