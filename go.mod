@@ -7,6 +7,7 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/creack/pty v1.1.24
 	github.com/denisbrodbeck/machineid v1.0.1
+	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-git/go-git/v6 v6.0.0-20260305211659-2083cf940afa
 	github.com/google/uuid v1.6.0
 	github.com/posthog/posthog-go v1.10.0
@@ -50,7 +51,6 @@ require (
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/fatih/semgroup v1.2.0 // indirect
-	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/gitleaks/go-gitdiff v0.9.1 // indirect
 	github.com/go-git/gcfg/v2 v2.0.2 // indirect
 	github.com/go-git/go-billy/v6 v6.0.0-20260226131633-45bd0956d66f // indirect
