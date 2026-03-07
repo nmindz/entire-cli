@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/entireio/cli/cmd/entire/cli/agent"
+	"github.com/entireio/cli/cmd/entire/cli/logging"
 	"github.com/entireio/cli/cmd/entire/cli/paths"
 	"github.com/entireio/cli/cmd/entire/cli/validation"
 )
@@ -76,6 +78,13 @@ func (a *OpenCodeAgent) ParseHookEvent(ctx context.Context, hookName string, std
 		transcriptPath, err := sessionTranscriptPath(ctx, raw.SessionID)
 		if err != nil {
 			return nil, err
+		}
+		// Log message_id for debugging turn-end detection
+		if raw.MessageID != "" {
+			logging.Debug(logging.WithComponent(ctx, "lifecycle"), "turn-end triggered by message completion",
+				slog.String("message_id", raw.MessageID),
+				slog.String("session_id", raw.SessionID),
+			)
 		}
 		return &agent.Event{
 			Type:       agent.TurnEnd,

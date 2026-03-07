@@ -12,6 +12,7 @@ import (
 
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint"
 	"github.com/entireio/cli/cmd/entire/cli/paths"
+	"github.com/entireio/cli/cmd/entire/cli/testutil"
 
 	"github.com/go-git/go-git/v6"
 	"github.com/go-git/go-git/v6/plumbing"
@@ -33,8 +34,9 @@ func TestReconcileDisconnected_NoRemote(t *testing.T) {
 		}
 	}
 	run("init", "-b", "main")
-	run("config", "user.email", "test@test.com")
-	run("config", "user.name", "Test User")
+	run("config", "user.email", testutil.GitEmail())
+	run("config", "user.name", testutil.GitName())
+	run("config", "commit.gpgsign", "false")
 	if err := os.WriteFile(filepath.Join(tmpDir, "README.md"), []byte("# Test"), 0o644); err != nil {
 		t.Fatalf("failed to write: %v", err)
 	}
@@ -391,8 +393,9 @@ func TestIsMetadataDisconnected_NoRemote(t *testing.T) {
 		}
 	}
 	run("init", "-b", "main")
-	run("config", "user.email", "test@test.com")
-	run("config", "user.name", "Test User")
+	run("config", "user.email", testutil.GitEmail())
+	run("config", "user.name", testutil.GitName())
+	run("config", "commit.gpgsign", "false")
 	if err := os.WriteFile(filepath.Join(tmpDir, "README.md"), []byte("# Test"), 0o644); err != nil {
 		t.Fatalf("failed to write: %v", err)
 	}

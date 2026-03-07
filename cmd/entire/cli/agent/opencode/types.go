@@ -13,11 +13,13 @@ type turnStartRaw struct {
 	Model     string `json:"model"`
 }
 
-// turnEndRaw matches the JSON payload for turn-end (session idle).
-// Extends sessionInfoRaw with model info captured during the turn.
+// turnEndRaw matches the JSON payload for turn-end.
+// The plugin fires turn-end on message.updated (assistant message completed).
+// message_id is optional — included for traceability/debugging.
 type turnEndRaw struct {
 	SessionID string `json:"session_id"`
 	Model     string `json:"model"`
+	MessageID string `json:"message_id,omitempty"` // ID of the completed assistant message
 }
 
 // --- Export JSON types (from `opencode export`) ---

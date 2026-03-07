@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/entireio/cli/cmd/entire/cli/testutil"
 )
 
 // Test constants to avoid goconst warnings
@@ -281,7 +283,7 @@ func TestLogging_BeforeInit(_ *testing.T) {
 func initGitRepo(t *testing.T, dir string) {
 	t.Helper()
 	t.Chdir(dir)
-	cmd := "git init && git config user.email 'test@test.com' && git config user.name 'Test'"
+	cmd := "git init && git config user.email '" + testutil.GitEmail() + "' && git config user.name '" + testutil.GitName() + "' && git config commit.gpgsign 'false'"
 	output, err := execCommand(t, "sh", "-c", cmd)
 	if err != nil {
 		t.Fatalf("Failed to init git repo: %v\nOutput: %s", err, output)

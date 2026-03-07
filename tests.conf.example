@@ -1,0 +1,9 @@
+# Test git identity configuration.
+# Copy to tests.conf to override (tests.conf is gitignored).
+#
+# These values are used by test helpers when setting up git repos.
+# Changing them here lets developers use their own identity in test output
+# without modifying source code.
+
+GIT_TEST_USER_NAME=Test User
+GIT_TEST_USER_EMAIL=test@example.com

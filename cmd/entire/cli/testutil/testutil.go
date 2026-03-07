@@ -43,8 +43,8 @@ func InitRepo(t *testing.T, repoDir string) {
 	if err != nil {
 		t.Fatalf("failed to get repo config: %v", err)
 	}
-	cfg.User.Name = "Test User"
-	cfg.User.Email = "test@example.com"
+	cfg.User.Name = GitName()
+	cfg.User.Email = GitEmail()
 
 	// Disable GPG signing for test commits
 	if cfg.Raw == nil {
@@ -146,11 +146,7 @@ func GitCommit(t *testing.T, repoDir, message string) {
 	}
 
 	_, err = worktree.Commit(message, &git.CommitOptions{
-		Author: &object.Signature{
-			Name:  "Test User",
-			Email: "test@example.com",
-			When:  time.Now(),
-		},
+		Author: TestAuthor(),
 	})
 	if err != nil {
 		t.Fatalf("failed to commit: %v", err)

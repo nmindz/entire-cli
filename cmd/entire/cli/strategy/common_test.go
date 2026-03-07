@@ -1012,8 +1012,9 @@ func initBareWithMetadataBranch(t *testing.T) string {
 	}
 	run(bareDir, "init", "--bare", "-b", "main")
 	run(workDir, "clone", bareDir, ".")
-	run(workDir, "config", "user.email", "test@test.com")
-	run(workDir, "config", "user.name", "Test User")
+	run(workDir, "config", "user.email", testutil.GitEmail())
+	run(workDir, "config", "user.name", testutil.GitName())
+	run(workDir, "config", "commit.gpgsign", "false")
 	if err := os.WriteFile(filepath.Join(workDir, "README.md"), []byte("# Test"), 0o644); err != nil {
 		t.Fatalf("failed to write file: %v", err)
 	}
@@ -1175,8 +1176,9 @@ func cloneWithConfig(t *testing.T, bareDir string) (string, func(args ...string)
 			t.Fatalf("git %v failed: %v\n%s", args, err, out)
 		}
 	}
-	run("config", "user.email", "test@test.com")
-	run("config", "user.name", "Test User")
+	run("config", "user.email", testutil.GitEmail())
+	run("config", "user.name", testutil.GitName())
+	run("config", "commit.gpgsign", "false")
 	return cloneDir, run
 }
 

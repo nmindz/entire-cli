@@ -367,3 +367,71 @@ func TestParseHookEvent_TurnEnd_InvalidSessionID(t *testing.T) {
 		t.Errorf("expected 'contains path separators' error, got: %v", err)
 	}
 }
+
+func TestParseHookEvent_TurnEnd_WithMessageID(t *testing.T) {
+	t.Parallel()
+
+	ag := &OpenCodeAgent{}
+	// New plugin sends message_id from the completed assistant message
+	input := `{"session_id": "sess-msg", "model": "claude-sonnet-4-20250514", "message_id": "msg-42"}`
+
+	event, err := ag.ParseHookEvent(context.Background(), HookNameTurnEnd, strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if event.Type != agent.TurnEnd {
+		t.Errorf("expected TurnEnd, got %v", event.Type)
+	}
+	if event.SessionID != "sess-msg" {
+		t.Errorf("expected session_id 'sess-msg', got %q", event.SessionID)
+	}
+	if event.Model != "claude-sonnet-4-20250514" {
+		t.Errorf("expected model 'claude-sonnet-4-20250514', got %q", event.Model)
+	}
+	// SessionRef should be computed from session_id
+	if !strings.HasSuffix(event.SessionRef, "sess-msg.json") {
+		t.Errorf("expected session ref to end with 'sess-msg.json', got %q", event.SessionRef)
+	}
+}
+
+func TestParseHookEvent_TurnEnd_WithModel(t *testing.T) {
+	t.Parallel()
+
+	ag := &OpenCodeAgent{}
+	// Plugin sends model directly from assistant message metadata
+	input := `{"session_id": "sess-model-end", "model": "gpt-4o"}`
+
+	event, err := ag.ParseHookEvent(context.Background(), HookNameTurnEnd, strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if event.Model != "gpt-4o" {
+		t.Errorf("expected model 'gpt-4o', got %q", event.Model)
+	}
+}
+
+func TestParseHookEvent_TurnEnd_BackwardCompatible(t *testing.T) {
+	t.Parallel()
+
+	ag := &OpenCodeAgent{}
+	// Old-style payload without message_id or model should still work
+	input := `{"session_id": "sess-old"}`
+
+	event, err := ag.ParseHookEvent(context.Background(), HookNameTurnEnd, strings.NewReader(input))
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if event.SessionID != "sess-old" {
+		t.Errorf("expected session_id 'sess-old', got %q", event.SessionID)
+	}
+	if event.Model != "" {
+		t.Errorf("expected empty model for old payload, got %q", event.Model)
+	}
+	// SessionRef should still be computed
+	if !strings.HasSuffix(event.SessionRef, "sess-old.json") {
+		t.Errorf("expected session ref to end with 'sess-old.json', got %q", event.SessionRef)
+	}
+}

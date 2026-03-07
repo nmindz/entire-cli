@@ -84,6 +84,29 @@ func DescribeCommit(ctx context.Context, dir string, revset string, message stri
 	return nil
 }
 
+// GitImport runs `jj git import` to sync git ref changes into JJ's internal state.
+// This must be called after any go-git operation that modifies git refs (branches),
+// because JJ doesn't see raw git ref updates — it tracks bookmarks internally.
+// This is a no-op if jj is not available (non-JJ repos).
+func GitImport(ctx context.Context, repoRoot string) error {
+	if !IsAvailable() {
+		return nil
+	}
+	_, _, err := RunJJ(ctx, repoRoot, "git", "import")
+	return err
+}
+
+// GitExport runs `jj git export` to sync JJ bookmark changes to git refs.
+// This should be called before git push operations in colocated mode,
+// ensuring git refs match JJ's bookmark state.
+func GitExport(ctx context.Context, repoRoot string) error {
+	if !IsAvailable() {
+		return nil
+	}
+	_, _, err := RunJJ(ctx, repoRoot, "git", "export")
+	return err
+}
+
 // AppendToDescription reads the current description of the commit identified by revset,
 // appends the trailer (if not already present), and writes the updated description back.
 // This is used to add Entire-Checkpoint trailers to JJ commits.

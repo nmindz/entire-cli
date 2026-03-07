@@ -174,6 +174,11 @@ func runJJPostCommit(g *jjHookContext) error { //nolint:unparam // error return 
 		// Trailer exists — still run PostCommit for condensation
 		hookErr := g.strategy.PostCommit(ctx)
 		g.logCompleted(hookErr)
+		// Sync git ref changes into JJ after condensation
+		if importErr := jj.GitImport(ctx, repoRoot); importErr != nil {
+			logging.Warn(ctx, "jj-post-commit: failed to import git refs into jj",
+				slog.String("error", importErr.Error()))
+		}
 		return nil
 	}
 
@@ -215,6 +220,14 @@ func runJJPostCommit(g *jjHookContext) error { //nolint:unparam // error return 
 	hookErr := g.strategy.PostCommit(ctx)
 	g.logCompleted(hookErr)
 
+	// Sync git ref changes (shadow branches, entire/checkpoints/v1) into JJ.
+	// PostCommit may create/update shadow branches and condense to the metadata
+	// branch via go-git, which bypasses JJ's bookmark tracking.
+	if importErr := jj.GitImport(ctx, repoRoot); importErr != nil {
+		logging.Warn(ctx, "jj-post-commit: failed to import git refs into jj",
+			slog.String("error", importErr.Error()))
+	}
+
 	return nil
 }
 
@@ -240,6 +253,16 @@ func newHooksJJPrePushCmd() *cobra.Command {
 
 			hookErr := g.strategy.PrePush(g.ctx, remote)
 			g.logCompleted(hookErr)
+
+			// Sync git ref changes into JJ after push operations.
+			// PrePush may fetch/merge the metadata branch, updating refs.
+			repoRoot, rootErr := paths.WorktreeRoot(g.ctx)
+			if rootErr == nil {
+				if importErr := jj.GitImport(g.ctx, repoRoot); importErr != nil {
+					logging.Warn(g.ctx, "jj-pre-push: failed to import git refs into jj",
+						slog.String("error", importErr.Error()))
+				}
+			}
 
 			return nil
 		},

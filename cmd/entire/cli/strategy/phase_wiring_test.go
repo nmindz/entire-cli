@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/entireio/cli/cmd/entire/cli/session"
+	"github.com/entireio/cli/cmd/entire/cli/testutil"
 	"github.com/entireio/cli/cmd/entire/cli/versioninfo"
 
 	"github.com/go-git/go-git/v6"
@@ -181,8 +182,8 @@ func setupGitRepo(t *testing.T) string {
 	// Configure git for commits
 	cfg, err := repo.Config()
 	require.NoError(t, err)
-	cfg.User.Name = "Test User"
-	cfg.User.Email = "test@test.com"
+	cfg.User.Name = testutil.GitName()
+	cfg.User.Email = testutil.GitEmail()
 	err = repo.SetConfig(cfg)
 	require.NoError(t, err)
 

@@ -12,6 +12,7 @@ import (
 	"github.com/entireio/cli/cmd/entire/cli/checkpoint/id"
 	"github.com/entireio/cli/cmd/entire/cli/paths"
 	"github.com/entireio/cli/cmd/entire/cli/session"
+	"github.com/entireio/cli/cmd/entire/cli/testutil"
 	"github.com/entireio/cli/cmd/entire/cli/trailers"
 
 	"github.com/go-git/go-git/v6"
@@ -906,8 +907,8 @@ func TestFilesChangedInCommit_InitialCommit(t *testing.T) {
 
 	cfg, err := repo.Config()
 	require.NoError(t, err)
-	cfg.User.Name = "Test"
-	cfg.User.Email = "test@test.com"
+	cfg.User.Name = testutil.GitName()
+	cfg.User.Email = testutil.GitEmail()
 	require.NoError(t, repo.SetConfig(cfg))
 
 	wt, err := repo.Worktree()
@@ -918,7 +919,7 @@ func TestFilesChangedInCommit_InitialCommit(t *testing.T) {
 	require.NoError(t, err)
 
 	commitHash, err := wt.Commit("initial", &git.CommitOptions{
-		Author: &object.Signature{Name: "Test", Email: "test@test.com", When: time.Now()},
+		Author: testutil.TestAuthor(),
 	})
 	require.NoError(t, err)
 

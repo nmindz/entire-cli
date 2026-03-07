@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/entireio/cli/cmd/entire/cli/testutil"
 	"github.com/go-git/go-git/v6"
 )
 
@@ -20,8 +21,9 @@ func initTestRepo(t *testing.T) *git.Repository {
 	ctx := context.Background()
 	cmds := [][]string{
 		{"git", "init", dir},
-		{"git", "-C", dir, "config", "user.name", "Test"},
-		{"git", "-C", dir, "config", "user.email", "test@test.com"},
+		{"git", "-C", dir, "config", "user.name", testutil.GitName()},
+		{"git", "-C", dir, "config", "user.email", testutil.GitEmail()},
+		{"git", "-C", dir, "config", "commit.gpgsign", "false"},
 	}
 	for _, args := range cmds {
 		cmd := exec.CommandContext(ctx, args[0], args[1:]...)

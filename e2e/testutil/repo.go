@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	clitestutil "github.com/entireio/cli/cmd/entire/cli/testutil"
 	"github.com/entireio/cli/e2e/agents"
 	"github.com/entireio/cli/e2e/entire"
 )
@@ -62,8 +63,9 @@ func SetupRepo(t *testing.T, agent agents.Agent) *RepoState {
 	}
 
 	Git(t, dir, "init")
-	Git(t, dir, "config", "user.name", "E2E Test")
-	Git(t, dir, "config", "user.email", "e2e@test.local")
+	Git(t, dir, "config", "user.name", clitestutil.GitName())
+	Git(t, dir, "config", "user.email", clitestutil.GitEmail())
+	Git(t, dir, "config", "commit.gpgsign", "false")
 	Git(t, dir, "commit", "--allow-empty", "-m", "initial commit")
 
 	entire.Enable(t, dir, agent.EntireAgent())

@@ -1,0 +1,91 @@
+{
+  // Hyvmind Configuration — Full Reference
+  // See: https://hyvmind.io/docs/config
+  //
+  // Project: opencode-ralphy
+
+  // ─── Identity ────────────────────────────────────────────────
+  // Username for memory containers. Required for memory to work.
+  // Set your Hyvmind username, or run 'hyvmind login' to authenticate.
+  "username": "nmindz",
+
+  // Auto-derive username from git config user.email (local part before @).
+  // Default: false. Only used if 'username' is not set and not authenticated.
+  // "generateUsernameFromVCS": false,
+
+  // Contact email (optional).
+  "email": "evandro@camargo.uk",
+
+  // ─── Backend ─────────────────────────────────────────────────
+  // "memoryBackend": "local",       // "local" | "remote"
+  // "enableRemoteBackend": false,
+
+  // ─── API Key ─────────────────────────────────────────────────
+  // Env var: HYVMIND_API_KEY
+  // "apiKey": "sm_...",
+
+  // ─── Remote Backend ──────────────────────────────────────────
+  // Base URL for the Hyvmind remote API.
+  // Env var override: HYVMIND_API_BASE_URL
+  // "apiBaseUrl": "https://api.hyvmind.io/v1",
+  // "requestTimeout": 30000,     // ms
+  // "retryCount": 2,
+  // "fallbackToLocal": true,
+
+  // ─── Memory Retrieval ────────────────────────────────────────
+  "similarityThreshold": 0.6,
+  "maxMemories": 5,
+  "maxProjectMemories": 10,
+  "maxProfileItems": 5,
+  "injectProfile": true,
+
+  // ─── Keywords ────────────────────────────────────────────────
+  // Additional keyword patterns for memory triggers (regex).
+  // Built-in patterns: remember, memorize, save this, note this, etc.
+  "keywordPatterns": ["log\\s+this", "write\\s+down"],
+
+  // ─── Compaction ──────────────────────────────────────────────
+  // Threshold (0-1) for context window usage before compaction triggers.
+  "compactionThreshold": 0.8,
+
+  // ─── Sensitive File Shield ────────────────────────────────────
+  // Inject a security reminder when working with sensitive files (.env, *.key, etc.).
+  // Default: true (enabled for safety). Set false to disable.
+  "sensitiveFileShield": true,
+  // Additional glob patterns beyond built-ins:
+  "sensitiveFilePatterns": ["**/.custom-secrets/**"],
+
+  // ─── Auto-Format On Edit ──────────────────────────────────────
+  // Automatically run a formatter after the agent saves/writes a file.
+  // Default: false (opt-in). Supports prettier, biome, gofmt, rustfmt, ruff, black.
+  "autoFormat": false,
+  // Custom formatter commands by file extension:
+  "formatters": { ".ts": "prettier --write", ".py": "black" },
+
+  // ─── Audit Mode ───────────────────────────────────────────────
+  // Log every chat.message invocation to a JSONL file for auditing.
+  // Default: false (opt-in).
+  "auditMode": false,
+  "auditLogPath": "~/.opencode-hyvmind-audit.jsonl",
+  "auditLogFull": false,   // true = log full message text (not just preview)
+
+  // ─── Autonomous Roadmap Executor ─────────────────────────────
+  // Enable roadmap tracking and the hyvmind_roadmap tool.
+  // STRICT opt-in — disabled by default.
+  "roadmapMode": true,
+  "roadmapFile": "ROADMAP.md",        // path relative to project root
+  "preferredVcs": "jj",             // "git" | "jj" | "auto"
+  "commitAtMilestone": true,
+  // "roadmapContinuePrompt": "",        // optional: custom message after roadmap status
+
+  // ─── Auto-Test On File Save ───────────────────────────────────
+  // Run the project test suite after the agent saves a matching file.
+  // Default: false (opt-in). Auto-detects bun/npm/cargo/go/pytest.
+  "autoTest": false,
+  "testCommand": "",                  // override auto-detected command
+  "testOnExtensions": [".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".rs"],
+  "testDebounceMs": 2000,
+  "testTimeout": 60000,
+  "testFailureContextLines": 50
+}
+

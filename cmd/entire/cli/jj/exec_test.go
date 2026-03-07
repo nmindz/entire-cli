@@ -46,6 +46,25 @@ func TestRunJJ_InvalidDir(t *testing.T) {
 	}
 }
 
+func TestGitImport_NoJJ(t *testing.T) {
+	t.Parallel()
+	// GitImport should be a no-op when jj is not available
+	// We can't easily test with a real jj binary in unit tests,
+	// but we can verify it doesn't panic on non-jj repos
+	ctx := context.Background()
+	err := GitImport(ctx, t.TempDir())
+	// May return nil (jj not found) or error (not a jj repo) - both are acceptable
+	_ = err
+}
+
+func TestGitExport_NoJJ(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	err := GitExport(ctx, t.TempDir())
+	// May return nil (jj not found) or error (not a jj repo) - both are acceptable
+	_ = err
+}
+
 func TestOperationType_IsCheckpointTrigger(t *testing.T) {
 	t.Parallel()
 
